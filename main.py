@@ -26,10 +26,10 @@ vsz.addMaxAvailableHourInProject('Enel21',80)
 vsz.addCostInProject('Enel21',220.0)
 
 copel = Project('Copel')
-copel.setContractMonthlyPayments([5000 6000 8000 5000 3000 2800 1550 8000 7500 5000 10000 12000])
+copel.setContractMonthlyPayments([5000, 6000, 8000, 5000, 3000, 2800, 1550, 8000, 7500, 5000, 10000, 12000])
 
 enel21 = Project('Enel21')
-enel21.setContractMonthlyPayments([15000 8000 5000 3000 4000 8800 3500 9000 7500 12000 3000 5000])
+enel21.setContractMonthlyPayments([15000, 8000, 5000, 3000, 4000, 8800, 3500, 9000, 7500, 12000, 3000, 5000])
 
 projectList = []
 projectList.append(copel)
@@ -40,7 +40,56 @@ resourceList.append(leg)
 resourceList.append(lmt)
 resourceList.append(vsz)
 
+n_months = 12
 
+# Create lists and dictionaries
+RESOURCES = [r.name for r in resourceList]
+PROJECTS = [p.name for p in projectList]
+MONTHS = list(range(1,n_months+1))
+
+# Resource Costs/hour
+COSTS = {}
+for r in resourceList:
+	COSTS[r.name] = r.costInProject
+
+# Maximum allocation (in projects)
+MAX_ALLOC_PROJ = {}
+for r in resourceList:
+	MAX_ALLOC_PROJ[r.name] = r.maxAvailableHourInProject
+
+# Maximum allocation (global)
+MAX_ALLOC = {}
+for r in resourceList:
+	MAX_ALLOC[r.name] = r.availableHours
+	
+# Project Monthly Payment
+PROJECTS_MONTHLY_PAYMENTS = {}
+for p in projectList:
+	PROJECTS_MONTHLY_PAYMENTS[p.name] = p.contractMonthlyPayments
+	
+
+# Create the 'prob' variable to contain the problem data
+prob = LpProblem('Resource Allocation Problem', LpMinimize)
+
+# Create variables
+difference_contract_up = pulp.LpVariable.dicts('Difference Payment Up',
+												((p,m) for p in PROJECTS for m in MONTHS),
+												lowBound=0,
+												cat='Continuous')
+
+difference_contract_down = pulp.LpVariable.dicts('Difference Payment Down',
+												((p,m) for p in PROJECTS for m in MONTHS),
+												lowBound=0,
+												cat='Continuous')
+
+allocations = pulp.LpVariable.dicts('Monthly Rsource Allocations',
+									((r,p,m) for r in RESOURCES for p in PROJECTS for m in MONTHS),
+									lowBound = 0,
+									cat = 'Integer')
+
+
+# Objective Function
+prob += lpSum([difference_contract_up[p,m] + difference_contract_down[p,m] for p in PROJECTS for m in MONTHS]), 'Difference between contract payment and costs'
 
 
 
